@@ -1,0 +1,69 @@
+#Fuentes de datos:
+
+#Esperanza de vida: https://es.wikipedia.org/wiki/Anexo:Pa%C3%ADses_por_esperanza_de_vida
+#Renta per capita a valores de paridad de poder adquisitivo: https://es.wikipedia.org/wiki/Anexo:Pa%C3%ADses_por_PIB_(PPA)_per_c%C3%A1pita
+
+#Pasos a dar:
+#------------
+#1- Buscar y capturar los datos de interés para el estudio a realizar. Asegurarse de que la licencia que hay sobre los mismos permite capturarlos.
+#2- Capturar los datos con Web Scraping.
+#3- Transformar los datos para poder hacer el estudio deseado
+#4- Realizar los análisis sobre los datos transformados
+#5- Publicar los resultados. Elegir la licencia de publicación
+
+
+#1- Capturar los datos:
+
+
+#Comandos R
+#------------
+#Objetivo: relacionar la renta per capita la esperanza de vida 
+#Carga de las librerias necesarias
+
+ library(stringr)
+ library(XML)
+ library(RCurl)
+
+#Captura de los datos en wikipedia
+#Esperanza de Vida
+ urlev="https://es.wikipedia.org/wiki/Anexo:Pa%C3%ADses_por_esperanza_de_vida"  #se guarda la url en una variable
+ EV=getURL(urlev) #se descarga la página web
+ tablesEV<-readHTMLTable(EV,stringSAsFactors=FALSE)  #se extraen las tablas
+ tableEV<-tablesEV[[2]]  #se filtra sólo la tabla 2 que contiene la info buscada
+ tableEV<-tableEV[,c(2,3)]  #se seleccionan sólo las columnas de la tabla que interesan
+ names(tableEV)<-c("Pais", "EV") #cambiamos el nombre de las etiquetas
+
+#Se repite proceso para la tabla RPC
+ urlrpc="https://es.wikipedia.org/wiki/Anexo:Pa%C3%ADses_por_PIB_(PPA)_per_c%C3%A1pita"  #se guarda la url en una variable
+ RPC=getURL(urlrpc) #se descarga la página web
+ tablesRPC<-readHTMLTable(RPC,stringSAsFactors=FALSE)  #se estraen las tablas
+ tableRPC<-tablesRPC[[3]]  #se filtra sólo la tabla 2 que contiene la info buscada
+ tableRPC<-tableRPC[,c(2,3)]  #se seleccionan sólo las columnas de la tabla que interesan
+ names(tableRPC)<-c("Pais", "RPCDolares") #cambiamos el nombre de las etiquetas
+ 
+
+#Ahora se fusionan las tablas y tiene que hacer un match de los países para determinar la Esperanza de vida ligada al RPC
+tabla<-list(pais=tableRPC$Pais,rpc=tableRPC$RPCDolares)   #se monta la tabla con los datos
+
+ #Se limpian los datos quitando espacios en blancos y comas mal puestas de los importes
+ tabla$rpc<-gsub(",","",tabla$rpc)
+ tabla$rpc<-gsub(" ","",tabla$rpc)
+ 
+# Match de paises para tener la esperanza de vida
+  for (i in 1:length(tabla$pais)){
+      for (x in 1:length(tableEV$Pais)){
+       if (str_detect(as.character(tableEV$Pais[x]), as.character(tabla$pais[i]))){
+        tabla$ev[i]<-as.character(tableEV$EV[x]) 
+	x<-length(tableEV$Pais)+1}
+       }
+   }
+   
+#Grabación de la tabla en un fichero CSV
+write.csv(tabla, "RPCvsLE.csv")
+   
+   
+   
+   
+   
+   
+   
